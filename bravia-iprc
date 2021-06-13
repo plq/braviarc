@@ -127,7 +127,7 @@ def send_ir_command(*args):
 def set_backlight(val):
     send_ir_command(
         # Picture
-        'Options', 1, 'Down', .1, 'Confirm', 3,
+        'Options', 2, 'Down', .1, 'Confirm', 3,
 
         # Backlight
         'Down', .1, 'Down', .1, 'Down', .1, 'Confirm', .5,
