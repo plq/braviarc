@@ -27,7 +27,7 @@ def rest_call_example():
     pprint(ir_commands)
 
 
-simple_ip_cmds = {
+SIMPLE_IP_CMDS_SOURCE = {
     "Display":       b"*SC IRCC 0000000000000005",
     "Home":          b"*SC IRCC 0000000000000006",
     "Options":       b"*SC IRCC 0000000000000007",
@@ -91,9 +91,13 @@ simple_ip_cmds = {
     "Power On":      b"*SC POWR 0000000000000001",
 }
 
-simple_ip_cmds = {
+SIMPLE_IP_CMDS = {
     key.replace(' ', '').upper(): val.replace(b" ", b"")
-                                             for key, val in simple_ip_cmds.items()
+                                      for key, val in SIMPLE_IP_CMDS_SOURCE.items()
+}
+
+CMD_READABLE = {
+    key.replace(' ', '').upper(): key for key, val in SIMPLE_IP_CMDS_SOURCE.items()
 }
 
 
@@ -106,10 +110,16 @@ def send_ir_command(*args):
         s.connect((HOST, PORT))
         for a in args:
             if isinstance(a, str):
-                a = a.replace(' ', '').upper()
-                s.sendall(simple_ip_cmds[a] + b'\n')
-                data = s.recv(24)
-                print(data)
+                akey = a.replace(' ', '').upper()
+                aread = CMD_READABLE[akey]
+                out_data = SIMPLE_IP_CMDS[akey] + b'\n'
+                s.sendall(out_data)
+                print("out:", repr(out_data)[1:], f"({aread})")
+
+                in_data = s.recv(24)
+                print("in: ", repr(in_data)[1:])
+                print()
+
             elif isinstance(a, (int, float)):
                 time.sleep(a)
 
@@ -133,17 +143,34 @@ def set_backlight(val):
     send_ir_command('Return', .5, 'Return', .5)  # exit
 
 
+def mlt(l, min_len, val=None):
+    """Minimum-length tuple."""
+    l.extend([val] * (min_len - len(l)))
+    return tuple(l)
+
+
 def main(args):
     if len(args) < 2:
+        subargs = sorted(list(CMD_READABLE.values()))
+        maxlen = len(max(subargs, key=len)) + 1
         print("Usage:", args[0], "<cmd> [args]")
-        print("   ", "sb, set-backlight <int 1-10>")
+        print("    Complex commands:")
+        print("       ", "sb, set-backlight <int 1-10>")
+        print()
+        print("    Simple commands (case insensitive, spaces can be omitted):")
+
+        for i in range(0, len(subargs), 3):
+            print("       ", "%-{0}s %-{0}s %-{0}s".format(maxlen)
+                                                      % mlt(subargs[i:i+3], 3, ""))
+
+        print()
         return 1
 
     if args[1] in ('sb', 'set-backlight'):
         set_backlight(int(args[2]))
 
-    elif args[1].upper() in simple_ip_cmds:
-        send_ir_command(args[1].upper(), .5)
+    elif args[1].upper().replace(' ', '') in SIMPLE_IP_CMDS:
+        send_ir_command(args[1], .5)
 
     else:
         raise ValueError(args[1])
